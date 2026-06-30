@@ -2,7 +2,7 @@ import streamlit as st
 import psycopg2
 import psycopg2.extras
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import subprocess, sys
 from db_config import DB_CONFIG
 def _pip(pkg):
@@ -179,6 +179,11 @@ def clientes():
     st.title("👤 Clientes")
     
     db = DB(get_db())
+
+    if 'edit_cliente' not in st.session_state:
+        st.session_state.edit_cliente = None
+    if 'del_cliente' not in st.session_state:
+        st.session_state.del_cliente = None
     
     col1, col2 = st.columns([3, 1])
     
@@ -238,11 +243,128 @@ def clientes():
     else:
         st.info("Nenhum cliente cadastrado ainda")
 
+     # ================ SEÇÃO DE EDIÇÃO ================
+    if st.session_state.edit_cliente:
+        with st.expander("✏️ Editando Cliente", expanded=True):
+            cliente_id = st.session_state.edit_cliente
+            # Buscar dados atuais
+            dados = db.q("""
+                SELECT p.nome, p.telefone, p.email, c.cpf_cnpj, c.tipo 
+                FROM Cliente c JOIN Pessoa p ON p.id=c.id 
+                WHERE c.id=%s
+            """, (cliente_id,))[0]
+            
+            with st.form("edit_cliente_form"):
+                st.info(f"Editando cliente ID: {cliente_id}")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    nome_edit = st.text_input("Nome *", value=dados['nome'])
+                with col2:
+                    cpf_edit = st.text_input("CPF/CNPJ *", value=dados['cpf_cnpj'])
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    telefone_edit = st.text_input("Telefone", value=dados['telefone'] or '')
+                with col2:
+                    email_edit = st.text_input("Email", value=dados['email'] or '')
+                with col3:
+                    tipo_edit = st.selectbox(
+                        "Tipo *", 
+                        ["PESSOA_FISICA", "PESSOA_JURIDICA"],
+                        index=0 if dados['tipo'] == 'PESSOA_FISICA' else 1
+                    )
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("💾 Salvar Alterações", use_container_width=True):
+                        if not nome_edit or not cpf_edit:
+                            st.error("Nome e CPF/CNPJ são obrigatórios!")
+                        else:
+                            try:
+                                db.run("UPDATE Pessoa SET nome=%s, telefone=%s, email=%s WHERE id=%s", 
+                                      (nome_edit, telefone_edit, email_edit, cliente_id))
+                                db.run("UPDATE Cliente SET cpf_cnpj=%s, tipo=%s WHERE id=%s", 
+                                      (cpf_edit, tipo_edit, cliente_id))
+                                st.success("✅ Cliente atualizado com sucesso!")
+                                st.session_state.edit_cliente = None
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro ao atualizar: {e}")
+                with col2:
+                    if st.form_submit_button("❌ Cancelar Edição", use_container_width=True):
+                        st.session_state.edit_cliente = None
+                        st.rerun()
+    
+    # ================ SEÇÃO DE EXCLUSÃO ================
+    if st.session_state.del_cliente:
+        cliente_id = st.session_state.del_cliente
+        nome_cliente = db.q("""
+            SELECT p.nome FROM Cliente c JOIN Pessoa p ON p.id=c.id WHERE c.id=%s
+        """, (cliente_id,))[0]['nome']
+        
+        st.warning(f"""
+        ### ⚠️ Confirmar Exclusão
+        
+        Tem certeza que deseja excluir o cliente **{nome_cliente}**?
+        
+        **ATENÇÃO:** Esta ação pode ser bloqueada se o cliente tiver pedidos vinculados.
+        """)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ Sim, Excluir", use_container_width=True):
+                try:
+                    db.run("DELETE FROM Cliente WHERE id=%s", (cliente_id,))
+                    st.success(f"✅ Cliente '{nome_cliente}' excluído com sucesso!")
+                    st.session_state.del_cliente = None
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Não foi possível excluir: {e}")
+        with col2:
+            if st.button("❌ Cancelar", use_container_width=True):
+                st.session_state.del_cliente = None
+                st.rerun()
+    
+    # ================ TABELA DE CLIENTES COM BOTÕES ================
+    # Converter para DataFrame
+    df = pd.DataFrame(rows)
+    
+    # Exibir tabela com botões usando colunas
+    st.write("### Lista de Clientes")
+    
+    for idx, row in df.iterrows():
+        col1, col2, col3, col4, col5, col6 = st.columns([3, 2, 2, 2, 1, 1])
+        
+        with col1:
+            st.write(f"**{row['nome']}**")
+        with col2:
+            st.write(row['cpf_cnpj'])
+        with col3:
+            st.write(row['telefone'] or '—')
+        with col4:
+            st.write(row['email'] or '—')
+        with col5:
+            if st.button("✏️", key=f"edit_{row['id']}", help="Editar cliente"):
+                st.session_state.edit_cliente = row['id']
+                st.rerun()
+        with col6:
+            if st.button("🗑️", key=f"del_{row['id']}", help="Excluir cliente"):
+                st.session_state.del_cliente = row['id']
+                st.rerun()
+        
+        st.divider()
+
 # ─────────────────────────── PRODUTOS ─────────────────────────────────────────
 def produtos():
     st.title("📦 Produtos")
     
     db = DB(get_db())
+
+    if 'edit_produto' not in st.session_state:
+        st.session_state.edit_produto = None
+    if 'del_produto' not in st.session_state:
+        st.session_state.del_produto = None
     
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -309,11 +431,143 @@ def produtos():
     else:
         st.info("Nenhum produto cadastrado")
 
+    # ================ SEÇÃO DE EDIÇÃO ================
+    if st.session_state.edit_produto:
+        with st.expander("✏️ Editando Produto", expanded=True):
+            produto_id = st.session_state.edit_produto
+            # Buscar dados atuais
+            dados = db.q("""
+                SELECT p.id_produto, p.nome, p.descricao, p.preco, p.id_categoria, cp.nome AS categoria_nome
+                FROM Produto p 
+                JOIN Categoria_Produto cp ON cp.id_categoria = p.id_categoria
+                WHERE p.id_produto=%s
+            """, (produto_id,))[0]
+            
+            # Recarregar categorias para o selectbox
+            cats_edit = db.q("SELECT id_categoria, nome FROM Categoria_Produto ORDER BY nome")
+            cat_edit_map = {c["nome"]: c["id_categoria"] for c in cats_edit}
+            
+            with st.form("edit_produto_form"):
+                st.info(f"Editando produto ID: {produto_id}")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    nome_edit = st.text_input("Nome *", value=dados['nome'])
+                with col2:
+                    preco_edit = st.number_input("Preço (R$) *", min_value=0.01, step=0.01, value=float(dados['preco']))
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    categoria_edit = st.selectbox(
+                        "Categoria *", 
+                        list(cat_edit_map.keys()),
+                        index=list(cat_edit_map.keys()).index(dados['categoria_nome']) if dados['categoria_nome'] in cat_edit_map else 0
+                    )
+                with col2:
+                    # Campo para criar nova categoria durante a edição
+                    nova_cat_edit = st.text_input("Ou crie uma nova categoria")
+                    if nova_cat_edit and st.form_submit_button("➕ Adicionar Categoria (edição)"):
+                        try:
+                            db.run("INSERT INTO Categoria_Produto(nome) VALUES(%s)", (nova_cat_edit,))
+                            st.success("Categoria criada! Recarregue a página.")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro: {e}")
+                
+                descricao_edit = st.text_area("Descrição", value=dados['descricao'] or '', height=100)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("💾 Salvar Alterações", use_container_width=True):
+                        if not nome_edit or not preco_edit:
+                            st.error("Nome e preço são obrigatórios!")
+                        else:
+                            try:
+                                # Atualizar dados do produto
+                                db.run("""
+                                    UPDATE Produto 
+                                    SET nome=%s, descricao=%s, preco=%s, id_categoria=%s 
+                                    WHERE id_produto=%s
+                                """, (nome_edit, descricao_edit, preco_edit, cat_edit_map[categoria_edit], produto_id))
+                                st.success("✅ Produto atualizado com sucesso!")
+                                st.session_state.edit_produto = None
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro ao atualizar: {e}")
+                with col2:
+                    if st.form_submit_button("❌ Cancelar Edição", use_container_width=True):
+                        st.session_state.edit_produto = None
+                        st.rerun()
+    
+    # ================ SEÇÃO DE EXCLUSÃO ================
+    if st.session_state.del_produto:
+        produto_id = st.session_state.del_produto
+        nome_produto = db.q("SELECT nome FROM Produto WHERE id_produto=%s", (produto_id,))[0]['nome']
+        
+        st.warning(f"""
+        ### ⚠️ Confirmar Exclusão
+        
+        Tem certeza que deseja excluir o produto **{nome_produto}**?
+        
+        **ATENÇÃO:** Esta ação pode ser bloqueada se o produto estiver vinculado a:
+        - Pedidos (itens de pedido)
+        - Estoque
+        - Fornecedores
+        """)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ Sim, Excluir", use_container_width=True):
+                try:
+                    db.run("DELETE FROM Produto WHERE id_produto=%s", (produto_id,))
+                    st.success(f"✅ Produto '{nome_produto}' excluído com sucesso!")
+                    st.session_state.del_produto = None
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Não foi possível excluir: {e}")
+        with col2:
+            if st.button("❌ Cancelar", use_container_width=True):
+                st.session_state.del_produto = None
+                st.rerun()
+    
+    # ================ TABELA DE PRODUTOS COM BOTÕES ================
+    df = pd.DataFrame(rows)
+    df['preco'] = df['preco'].apply(lambda x: f"R$ {x:,.2f}")
+    
+    st.write("### Lista de Produtos")
+    
+    for idx, row in df.iterrows():
+        col1, col2, col3, col4, col5, col6 = st.columns([3, 2, 2, 2, 1, 1])
+        
+        with col1:
+            st.write(f"**{row['nome']}**")
+        with col2:
+            st.write(row['categoria'])
+        with col3:
+            st.write(row['preco'])
+        with col4:
+            st.write(row['descricao'][:50] + '...' if len(str(row['descricao'])) > 50 else row['descricao'])
+        with col5:
+            if st.button("✏️", key=f"edit_prod_{row['id_produto']}", help="Editar produto"):
+                st.session_state.edit_produto = row['id_produto']
+                st.rerun()
+        with col6:
+            if st.button("🗑️", key=f"del_prod_{row['id_produto']}", help="Excluir produto"):
+                st.session_state.del_produto = row['id_produto']
+                st.rerun()
+        
+        st.divider()
+
 # ─────────────────────────── VENDEDORES ──────────────────────────────────────
 def vendedores():
     st.title("🧑‍💼 Vendedores")
     
     db = DB(get_db())
+
+    if 'edit_vendedor' not in st.session_state:
+        st.session_state.edit_vendedor = None
+    if 'del_vendedor' not in st.session_state:
+        st.session_state.del_vendedor = None
     
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -362,6 +616,104 @@ def vendedores():
         st.dataframe(df, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhum vendedor cadastrado")
+
+    # ================ SEÇÃO DE EDIÇÃO ================
+    if st.session_state.edit_vendedor:
+        with st.expander("✏️ Editando Vendedor", expanded=True):
+            vendedor_id = st.session_state.edit_vendedor
+            # Buscar dados atuais
+            dados = db.q("""
+                SELECT p.nome, p.telefone, v.matricula 
+                FROM Vendedor v JOIN Pessoa p ON p.id=v.id 
+                WHERE v.id=%s
+            """, (vendedor_id,))[0]
+            
+            with st.form("edit_vendedor_form"):
+                st.info(f"Editando vendedor ID: {vendedor_id}")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    nome_edit = st.text_input("Nome *", value=dados['nome'])
+                with col2:
+                    matricula_edit = st.text_input("Matrícula *", value=dados['matricula'])
+                
+                telefone_edit = st.text_input("Telefone", value=dados['telefone'] or '')
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("💾 Salvar Alterações", use_container_width=True):
+                        if not nome_edit or not matricula_edit:
+                            st.error("Nome e matrícula são obrigatórios!")
+                        else:
+                            try:
+                                db.run("UPDATE Pessoa SET nome=%s, telefone=%s WHERE id=%s", 
+                                      (nome_edit, telefone_edit, vendedor_id))
+                                db.run("UPDATE Vendedor SET matricula=%s WHERE id=%s", 
+                                      (matricula_edit, vendedor_id))
+                                st.success("✅ Vendedor atualizado com sucesso!")
+                                st.session_state.edit_vendedor = None
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro ao atualizar: {e}")
+                with col2:
+                    if st.form_submit_button("❌ Cancelar Edição", use_container_width=True):
+                        st.session_state.edit_vendedor = None
+                        st.rerun()
+    
+    # ================ SEÇÃO DE EXCLUSÃO ================
+    if st.session_state.del_vendedor:
+        vendedor_id = st.session_state.del_vendedor
+        nome_vendedor = db.q("""
+            SELECT p.nome FROM Vendedor v JOIN Pessoa p ON p.id=v.id WHERE v.id=%s
+        """, (vendedor_id,))[0]['nome']
+        
+        st.warning(f"""
+        ### ⚠️ Confirmar Exclusão
+        
+        Tem certeza que deseja excluir o vendedor **{nome_vendedor}**?
+        
+        **ATENÇÃO:** Esta ação pode ser bloqueada se o vendedor tiver pedidos vinculados.
+        """)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ Sim, Excluir", use_container_width=True):
+                try:
+                    db.run("DELETE FROM Vendedor WHERE id=%s", (vendedor_id,))
+                    st.success(f"✅ Vendedor '{nome_vendedor}' excluído com sucesso!")
+                    st.session_state.del_vendedor = None
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Não foi possível excluir: {e}")
+        with col2:
+            if st.button("❌ Cancelar", use_container_width=True):
+                st.session_state.del_vendedor = None
+                st.rerun()
+    
+    # ================ TABELA DE VENDEDORES COM BOTÕES ================
+    df = pd.DataFrame(rows)
+    
+    st.write("### Lista de Vendedores")
+    
+    for idx, row in df.iterrows():
+        col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 1, 1])
+        
+        with col1:
+            st.write(f"**{row['nome']}**")
+        with col2:
+            st.write(row['matricula'])
+        with col3:
+            st.write(row['telefone'] or '—')
+        with col4:
+            if st.button("✏️", key=f"edit_vend_{row['id']}", help="Editar vendedor"):
+                st.session_state.edit_vendedor = row['id']
+                st.rerun()
+        with col5:
+            if st.button("🗑️", key=f"del_vend_{row['id']}", help="Excluir vendedor"):
+                st.session_state.del_vendedor = row['id']
+                st.rerun()
+        
+        st.divider()
 
 # ─────────────────────────── PEDIDOS ──────────────────────────────────────────
 def pedidos():
