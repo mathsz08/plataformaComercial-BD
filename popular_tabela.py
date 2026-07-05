@@ -22,7 +22,11 @@ nomes = [
     "Pedro Santos",
     "Ana Costa",
     "Lucas Souza",
-    "Julia Martins"
+    "Julia Martins",
+    "Carla Mendes",
+    "Rafael Almeida",
+    "Fernanda Rocha",
+    "Bruno Lima"
 ]
 
 ruas = [
@@ -57,7 +61,11 @@ produtos = [
     ("Notebook", "Notebook Dell"),
     ("Mouse", "Mouse Gamer"),
     ("Teclado", "Teclado Mecânico"),
-    ("Livro Python", "Programação Python")
+    ("Livro Python", "Programação Python"),
+    ("Monitor", "Monitor LED 24 polegadas"),
+    ("Cadeira de Escritório", "Cadeira ergonômica"),
+    ("Impressora", "Impressora multifuncional"),
+    ("Webcam", "Webcam Full HD")
 ]
 
 fornecedores = [
@@ -72,6 +80,12 @@ estoques = [
 ]
 
 status_pedido = [
+    "PENDENTE",
+    "PROCESSANDO",
+    "PROCESSANDO",
+    "ENVIADO",
+    "CONCLUIDO",
+    "CANCELADO",
     "PENDENTE",
     "PROCESSANDO",
     "ENVIADO",
@@ -90,7 +104,7 @@ status_entrega = [
 
 pessoas = []
 
-for nome in nomes[:4]:
+for nome in nomes:
     cur.execute("""
         INSERT INTO Pessoa(nome,telefone,email)
         VALUES(%s,%s,%s)
@@ -109,13 +123,17 @@ for nome in nomes[:4]:
 
 clientes = []
 
-for pid in pessoas[:2]:
+for i, pid in enumerate(pessoas[:6]):
+    tipo_cliente = 'PESSOA_JURIDICA' if i in (1, 4) else 'PESSOA_FISICA'
+    documento = str(random.randint(10000000000000,99999999999999)) if tipo_cliente == 'PESSOA_JURIDICA' else str(random.randint(10000000000,99999999999))
+
     cur.execute("""
         INSERT INTO Cliente(id,cpf_cnpj,tipo)
-        VALUES(%s,%s,'PESSOA_FISICA')
+        VALUES(%s,%s,%s)
     """, (
         pid,
-        str(random.randint(10000000000,99999999999))
+        documento,
+        tipo_cliente
     ))
 
     clientes.append(pid)
@@ -126,7 +144,7 @@ for pid in pessoas[:2]:
 
 vendedores = []
 
-for pid in pessoas[2:4]:
+for pid in pessoas[6:10]:
     cur.execute("""
         INSERT INTO Vendedor(id,matricula)
         VALUES(%s,%s)
@@ -165,7 +183,7 @@ for cliente in clientes:
 
 ids_categoria = []
 
-for cat in categorias[:2]:
+for cat in categorias:
     cur.execute("""
         INSERT INTO Categoria_Produto(nome)
         VALUES(%s)
@@ -180,7 +198,7 @@ for cat in categorias[:2]:
 
 ids_produtos = []
 
-for nome,desc in produtos[:2]:
+for nome,desc in produtos:
 
     cur.execute("""
         INSERT INTO Produto
@@ -202,7 +220,7 @@ for nome,desc in produtos[:2]:
 
 ids_fornecedor = []
 
-for nome in fornecedores[:2]:
+for nome in fornecedores:
 
     cur.execute("""
         INSERT INTO Fornecedor(nome,contato)
@@ -255,7 +273,7 @@ for e in ids_estoque:
         """,(
             e,
             p,
-            random.randint(10,100)
+            random.choice([5, 8, 12, 18, 25, 40, 75, 100])
         ))
 
 # ============================================
@@ -264,7 +282,7 @@ for e in ids_estoque:
 
 ids_pedido=[]
 
-for i in range(2):
+for i, status in enumerate(status_pedido):
 
     cur.execute("""
         INSERT INTO Pedido
@@ -272,10 +290,10 @@ for i in range(2):
         VALUES(%s,%s,%s,%s)
         RETURNING id_pedido
     """,(
-        date.today()-timedelta(days=random.randint(0,30)),
-        random.choice(status_pedido),
-        clientes[i],
-        vendedores[i]
+        date.today()-timedelta(days=i * 4),
+        status,
+        clientes[i % len(clientes)],
+        vendedores[i % len(vendedores)]
     ))
 
     ids_pedido.append(cur.fetchone()[0])
@@ -284,7 +302,7 @@ for i in range(2):
 # Entrega
 # ============================================
 
-for i,pedido in enumerate(ids_pedido):
+for i,pedido in enumerate(ids_pedido[:len(enderecos)]):
 
     cur.execute("""
         INSERT INTO Entrega

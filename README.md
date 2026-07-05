@@ -86,7 +86,7 @@ python popular_tabela.py   # Windows
 ## ▶️ Rodando a Aplicação
 
 ```bash
-streamlit run plataforma_streamlit.py
+streamlit run plataforma_comercial.py
 ```
 
 A aplicação abrirá em: **http://localhost:8501**
