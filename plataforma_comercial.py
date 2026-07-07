@@ -24,49 +24,117 @@ st.set_page_config(
     menu_items={"About": "Sistema de Gestão Comercial v1.0"}
 )
 
-# Custom CSS
+# Custom CSS — identidade visual corporativa (azul/cinza, sóbria)
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans:wght@600;700&display=swap');
+
     :root {
-        --primary-color: #2563eb;
-        --text-color: #1f2937;
-        --background-color: #f9fafb;
+        --navy-950: #0b1f33;
+        --navy-900: #0f2942;
+        --navy-800: #1c3a5e;
+        --blue-600: #2563eb;
+        --blue-500: #3b82f6;
+        --slate-900: #1e293b;
+        --slate-600: #475569;
+        --slate-400: #94a3b8;
+        --slate-200: #e2e8f0;
+        --bg: #f4f6f9;
+        --surface: #ffffff;
+        --border: #dde3ea;
+        --success: #15803d;   --success-bg: #ecfdf5;  --success-border: #10b981;
+        --warning: #b45309;   --warning-bg: #fffbeb;  --warning-border: #f59e0b;
+        --danger:  #b91c1c;   --danger-bg:  #fef2f2;  --danger-border:  #ef4444;
+        --info:    #1d4ed8;   --info-bg:    #eff6ff;  --info-border:    #3b82f6;
+        --radius: 10px;
     }
-    
-    .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 20px;
-        border-radius: 10px;
-        color: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+
+    /* ── Base ─────────────────────────────────────────────────────── */
+    [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
+        font-family: 'Inter', -apple-system, sans-serif;
     }
-    
-    .metric-value {
-        font-size: 2.5em;
-        font-weight: bold;
-        margin: 10px 0;
+    [data-testid="stAppViewContainer"] { background-color: var(--bg); }
+    [data-testid="stHeader"] { background-color: transparent; }
+    .block-container { padding-top: 2rem; padding-bottom: 3rem; max-width: 1200px; }
+    footer { visibility: hidden; }
+
+    h1, h2, h3 { font-family: 'IBM Plex Sans', sans-serif; color: var(--navy-900); letter-spacing: -0.01em; }
+    h1 { font-weight: 700; border-bottom: 3px solid var(--blue-600); padding-bottom: .5rem; margin-bottom: 1.25rem; }
+    h2, h3 { font-weight: 600; color: var(--navy-800); }
+    hr { border-color: var(--border) !important; margin: 1.5rem 0 !important; }
+
+    /* ── Sidebar ──────────────────────────────────────────────────── */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, var(--navy-900), var(--navy-950));
     }
-    
-    .metric-label {
-        font-size: 0.9em;
-        opacity: 0.9;
+    [data-testid="stSidebar"] * { color: #e6edf5; }
+    [data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.12) !important; }
+    [data-testid="stSidebar"] input[type="radio"] { accent-color: var(--blue-500); }
+
+    .sidebar-brand { display: flex; align-items: center; gap: .75rem; padding: .25rem 0 .75rem 0; }
+    .sidebar-brand-icon {
+        width: 44px; height: 44px; border-radius: 10px;
+        background: rgba(59,130,246,0.18); border: 1px solid rgba(59,130,246,0.35);
+        display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0;
     }
-    
-    .success-box {
-        background-color: #dcfce7;
-        padding: 15px;
-        border-radius: 5px;
-        border-left: 4px solid #22c55e;
-        margin: 10px 0;
+    .sidebar-brand-title { font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; font-size: 1.02rem; color: #fff; line-height: 1.2; }
+    .sidebar-brand-sub { font-size: .75rem; color: #9fb3c8; letter-spacing: .03em; }
+
+    [data-testid="stSidebar"] label:has(input[type="radio"]) {
+        border-radius: 8px; padding: .55rem .7rem; transition: background-color .15s ease;
     }
-    
-    .warning-box {
-        background-color: #fef3c7;
-        padding: 15px;
-        border-radius: 5px;
-        border-left: 4px solid #f59e0b;
-        margin: 10px 0;
+    [data-testid="stSidebar"] label:has(input[type="radio"]):hover { background-color: rgba(255,255,255,0.06); }
+    [data-testid="stSidebar"] label:has(input:checked) {
+        background-color: rgba(59,130,246,0.16);
+        border-left: 3px solid var(--blue-500);
+        font-weight: 600;
     }
+
+    /* ── Métricas (KPIs) ──────────────────────────────────────────── */
+    [data-testid="stMetric"] {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--blue-600);
+        border-radius: var(--radius);
+        padding: 1rem 1.25rem;
+        box-shadow: 0 1px 2px rgba(15,23,42,0.05);
+    }
+    [data-testid="stMetricValue"] { color: var(--navy-900); font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; }
+    [data-testid="stMetricLabel"] { color: var(--slate-600); text-transform: uppercase; letter-spacing: .04em; font-size: .78rem; font-weight: 600; }
+
+    /* ── Botões ───────────────────────────────────────────────────── */
+    .stButton > button, [data-testid="stFormSubmitButton"] button {
+        border-radius: 8px; font-weight: 600; border: 1px solid var(--border);
+        margin-top: 0.35rem;
+        transition: filter .15s ease, background-color .15s ease;
+    }
+    .stButton > button[kind="primary"], [data-testid="stFormSubmitButton"] button[kind="primary"] {
+        background-color: var(--blue-600); border-color: var(--blue-600);
+    }
+    .stButton > button[kind="primary"]:hover, [data-testid="stFormSubmitButton"] button[kind="primary"]:hover {
+        filter: brightness(0.92);
+    }
+    .stButton > button[kind="secondary"]:hover { background-color: var(--slate-200); }
+
+    /* ── Formulários, expanders, tabelas ──────────────────────────── */
+    [data-testid="stForm"] {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 1.5rem 1.5rem .5rem;
+        box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+    }
+    [data-testid="stExpander"] { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+    [data-testid="stDataFrame"] { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+
+    .stTextInput input, .stNumberInput input, .stDateInput input, .stTextArea textarea,
+    .stSelectbox div[data-baseweb="select"] > div {
+        border-radius: 8px !important; border-color: var(--border) !important;
+    }
+    .stTextInput input:focus, .stNumberInput input:focus, .stDateInput input:focus, .stTextArea textarea:focus {
+        border-color: var(--blue-500) !important; box-shadow: 0 0 0 1px var(--blue-500) !important;
+    }
+
+    /* ── Alertas (success/info/warning/error) ────────────────────── */
+    [data-testid="stAlert"], .stAlert { border-radius: var(--radius) !important; border: 1px solid var(--border); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -101,8 +169,15 @@ class DB:
 
 # ─────────────────────────── SIDEBAR ──────────────────────────────────────────
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/000000/shop.png", width=80)
-    st.title("🏪 Plataforma Comercial")
+    st.markdown("""
+    <div class="sidebar-brand">
+        <div class="sidebar-brand-icon">🏪</div>
+        <div>
+            <div class="sidebar-brand-title">Plataforma Comercial</div>
+            <div class="sidebar-brand-sub">Gestão Comercial</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     st.divider()
     
     page = st.radio(
@@ -126,20 +201,20 @@ def dashboard():
     
     with col1:
         n_clientes = db.q("SELECT COUNT(*) as n FROM Cliente")[0]["n"]
-        st.metric("👥 Clientes", n_clientes, "registrados")
+        st.metric("👥 Clientes", n_clientes, "registrados", delta_color="off")
     
     with col2:
         n_produtos = db.q("SELECT COUNT(*) as n FROM Produto")[0]["n"]
-        st.metric("📦 Produtos", n_produtos, "no catálogo")
+        st.metric("📦 Produtos", n_produtos, "no catálogo", delta_color="off")
     
     with col3:
         n_pedidos = db.q("""SELECT COUNT(*) as n FROM Pedido 
                             WHERE status NOT IN ('CANCELADO','CONCLUIDO')""")[0]["n"]
-        st.metric("🛒 Pedidos Ativos", n_pedidos, "em processamento")
+        st.metric("🛒 Pedidos Ativos", n_pedidos, "em processamento", delta_color="off")
     
     with col4:
         n_vendedores = db.q("SELECT COUNT(*) as n FROM Vendedor")[0]["n"]
-        st.metric("💼 Vendedores", n_vendedores, "ativos")
+        st.metric("💼 Vendedores", n_vendedores, "ativos", delta_color="off")
     
     st.divider()
     
@@ -185,7 +260,7 @@ def clientes():
     if 'del_cliente' not in st.session_state:
         st.session_state.del_cliente = None
     
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns([3, 1], vertical_alignment="center")
     
     with col1:
         st.subheader("Novo Cliente")
@@ -366,7 +441,7 @@ def produtos():
     if 'del_produto' not in st.session_state:
         st.session_state.del_produto = None
     
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns([3, 1], vertical_alignment="center")
     with col1:
         st.subheader("Novo Produto")
     with col2:
@@ -570,7 +645,7 @@ def vendedores():
     if 'del_vendedor' not in st.session_state:
         st.session_state.del_vendedor = None
     
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns([3, 1], vertical_alignment="center")
     with col1:
         st.subheader("Novo Vendedor")
     with col2:
@@ -727,7 +802,7 @@ def fornecedores():
     if 'del_fornecedor' not in st.session_state:
         st.session_state.del_fornecedor = None
 
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns([3, 1], vertical_alignment="center")
     with col1:
         st.subheader("Novo Fornecedor")
     with col2:
@@ -893,7 +968,7 @@ def pedidos():
     
     db = DB(get_db())
     
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns([3, 1], vertical_alignment="center")
     with col1:
         st.subheader("Novo Pedido")
     with col2:
@@ -1017,7 +1092,7 @@ def estoque():
     
     db = DB(get_db())
     
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns([3, 1], vertical_alignment="center")
     with col1:
         st.subheader("Gerenciar Estoque")
     with col2:
