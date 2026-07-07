@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 echo "======================================"
@@ -88,7 +89,8 @@ CREATE TABLE Fornece (
 
 CREATE TABLE Estoque (
     id_estoque SERIAL PRIMARY KEY,
-    descricao VARCHAR(200)
+    descricao VARCHAR(200),
+    id_endereco INT REFERENCES Endereco(id_endereco) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 CREATE TABLE Estoque_Produto (
